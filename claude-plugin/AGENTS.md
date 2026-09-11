@@ -25,7 +25,6 @@ Claude Code integration uses bash hooks plus JavaScript helpers and three skills
 | On-demand recall | `skills/recall/SKILL.md` |
 | On-demand store | `skills/store/SKILL.md` |
 | On-demand memory management | `skills/memory/SKILL.md` |
-| Local state cleanup | `skills/cleanup/SKILL.md` |
 
 ## Local conventions
 
@@ -35,7 +34,6 @@ Claude Code integration uses bash hooks plus JavaScript helpers and three skills
 - Automatic recall and ingest go through `/v1alpha2/mem9s/...` with `X-API-Key` and `X-Mnemo-Agent-Id`.
 - Runtime auth is stored in `${CLAUDE_PLUGIN_DATA}/auth.json`.
 - `skills/memory/SKILL.md` covers the `/v1alpha2/mem9s` memory API surface; keep it aligned with `docs/api/openapi.json`.
-- `skills/cleanup/SKILL.md` removes only known files under `${CLAUDE_PLUGIN_DATA}` and never deletes cloud data.
 
 ## Validation
 

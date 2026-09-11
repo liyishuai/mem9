@@ -101,7 +101,6 @@ The plugin exposes:
 - `/mem9:recall`
 - `/mem9:store`
 - `/mem9:memory`
-- `/mem9:cleanup`
 
 `/mem9:setup` is the backup path when auto-init did not complete.
 It writes `${CLAUDE_PLUGIN_DATA}/auth.json` without printing the API key back to the user.
@@ -118,20 +117,6 @@ directly with inline commands:
 
 `list` omits `agent_id` by default so every agent bucket in the account contributes, matching
 automatic recall. Use `agent_id` only to narrow to one agent.
-
-`/mem9:cleanup` removes mem9-managed local plugin state before reinstalling, resetting, or
-uninstalling: `${CLAUDE_PLUGIN_DATA}/auth.json`, `${CLAUDE_PLUGIN_DATA}/runtime-notices.json`,
-and `${CLAUDE_PLUGIN_DATA}/logs/` when requested.
-
-Cleanup never deletes cloud memories, quota usage, or billing state, and never prints the API
-key. After cleanup, the next session start auto-provisions a fresh API key.
-
-## Uninstall
-
-1. Run `/mem9:cleanup` to reset local plugin state.
-2. Remove the plugin in Claude Code (`/plugin`), which also removes the plugin data directory.
-3. Optional: delete cloud data first with `/mem9:memory batch-delete` if you want the stored
-   memories gone too.
 
 ## Troubleshooting
 
