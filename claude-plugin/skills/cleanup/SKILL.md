@@ -17,48 +17,47 @@ or billing state. To delete stored memories, use `/mem9:memory` instead.
 
 ## Steps
 
-1. Resolve `./scripts/cleanup.mjs` relative to this skill directory.
-2. If you need the current CLI surface, flags, or examples, run
-   `node ./scripts/cleanup.mjs --help` first.
-3. Inspect the current cleanup targets first:
+1. Check what currently exists:
 
 ```bash
 set -euo pipefail
-node ./scripts/cleanup.mjs inspect
+
+data_dir="${CLAUDE_PLUGIN_DATA}"
+test -n "$data_dir"
+for target in auth.json runtime-notices.json logs; do
+  if [ -e "${data_dir}/${target}" ]; then
+    printf 'exists: %s\n' "${data_dir}/${target}"
+  else
+    printf 'missing: %s\n' "${data_dir}/${target}"
+  fi
+done
 ```
 
-4. Use the JSON summary to confirm what exists. Ask the user whether debug logs should also be
-   removed when `debug_logs` exists.
-5. Remove the mem9-managed local files:
+2. Show the user what exists. Do not print file contents — `auth.json` holds the API key.
+3. Remove the mem9-managed local files:
 
 ```bash
-set -euo pipefail
-node ./scripts/cleanup.mjs run
+rm -f "${data_dir}/auth.json" "${data_dir}/runtime-notices.json"
 ```
 
-6. When the user also wants the debug logs removed, run:
+4. When the user also wants the debug logs removed:
 
 ```bash
-set -euo pipefail
-node ./scripts/cleanup.mjs run --include-logs
+rm -rf "${data_dir}/logs"
 ```
 
-## What cleanup removes
+## Scope
 
-`run` removes, inside `${CLAUDE_PLUGIN_DATA}` only:
+Removed, inside `${CLAUDE_PLUGIN_DATA}` only:
 
 - `auth.json` — the cached mem9 API key
 - `runtime-notices.json` — runtime quota notice state
+- `logs/` — mem9 hook debug logs, only when the user asks
 
-`run --include-logs` also removes:
-
-- `logs/` — mem9 hook debug logs
-
-## What cleanup keeps
+Kept:
 
 - Cloud memories, quota usage, and billing state — not touched.
-- The `${CLAUDE_PLUGIN_DATA}` directory itself — Claude Code owns it.
-- Anything outside `${CLAUDE_PLUGIN_DATA}`.
+- The `${CLAUDE_PLUGIN_DATA}` directory itself and anything else in it — Claude Code owns it.
 
 ## After cleanup
 

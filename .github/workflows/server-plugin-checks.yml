@@ -97,9 +97,6 @@ jobs:
           node --check hooks/lib/hook-json.mjs
           node --check hooks/lib/memories-formatter.mjs
           node --check hooks/lib/transcript-parser.mjs
-          node --check lib/skill-auth.mjs
-          node --check skills/memory/scripts/memory.mjs
-          node --check skills/cleanup/scripts/cleanup.mjs
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v4

@@ -106,33 +106,25 @@ The plugin exposes:
 `/mem9:setup` is the backup path when auto-init did not complete.
 It writes `${CLAUDE_PLUGIN_DATA}/auth.json` without printing the API key back to the user.
 
-`/mem9:memory` manages what has already been stored. It wraps the `/v1alpha2/mem9s` API with
-subcommands:
+`/mem9:memory` manages what has already been stored. It drives the `/v1alpha2/mem9s` API
+directly with inline commands:
 
-- `status` — show the API key status
-- `list` — list or search memories with filters (`--q`, `--tags`, `--source`, `--state`,
-  `--memory-type`, `--agent-id`, `--session-id`, `--app-id`, `--sort-by`, `--sort-dir`,
-  `--search-mode`, `--limit`, `--offset`)
-- `get <id>` — show one memory
-- `update <id>` — replace `--content`, `--tags`, or `--metadata`, with optional
-  `--if-match <version>` for optimistic updates
-- `delete <id>` — delete one memory
-- `batch-delete <id> [id ...]` — delete multiple memories in one request
-- `session-messages --session-id <id>` — list the raw session messages stored for one or more
-  sessions
+- key status
+- list or search memories with filters (`q`, `tags`, `source`, `state`, `memory_type`,
+  `agent_id`, `session_id`, `appId`, `sort_by`, `sort_dir`, `search_mode`, `limit`, `offset`)
+- get, update (content/tags/metadata with optional `If-Match` optimistic locking), delete, and
+  batch-delete memories by id
+- list the raw session messages stored for one or more sessions
 
 `list` omits `agent_id` by default so every agent bucket in the account contributes, matching
-automatic recall. Use `--agent-id` to narrow to one agent.
+automatic recall. Use `agent_id` only to narrow to one agent.
 
 `/mem9:cleanup` removes mem9-managed local plugin state before reinstalling, resetting, or
-uninstalling:
-
-- `inspect` — print a JSON summary of removable targets
-- `run` — remove `${CLAUDE_PLUGIN_DATA}/auth.json` and `${CLAUDE_PLUGIN_DATA}/runtime-notices.json`
-- `run --include-logs` — also remove `${CLAUDE_PLUGIN_DATA}/logs/`
+uninstalling: `${CLAUDE_PLUGIN_DATA}/auth.json`, `${CLAUDE_PLUGIN_DATA}/runtime-notices.json`,
+and `${CLAUDE_PLUGIN_DATA}/logs/` when requested.
 
 Cleanup never deletes cloud memories, quota usage, or billing state, and never prints the API
-key. After `run`, the next session start auto-provisions a fresh API key.
+key. After cleanup, the next session start auto-provisions a fresh API key.
 
 ## Uninstall
 
