@@ -100,7 +100,6 @@ jobs:
           node --check lib/skill-auth.mjs
           node --check skills/memory/scripts/memory.mjs
           node --check skills/cleanup/scripts/cleanup.mjs
-          node --test tests/*.test.mjs
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v4

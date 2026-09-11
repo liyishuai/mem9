@@ -74,7 +74,7 @@ function buildHelpText() {
   ].join("\n");
 }
 
-export function resolveDataDir(env = process.env, override = "") {
+function resolveDataDir(env = process.env, override = "") {
   const dir = normalizeString(override) || normalizeString(env.CLAUDE_PLUGIN_DATA);
   if (!dir) {
     throw new Error(
@@ -84,7 +84,7 @@ export function resolveDataDir(env = process.env, override = "") {
   return path.resolve(dir);
 }
 
-export function parseArgs(argv = process.argv.slice(2)) {
+function parseArgs(argv = process.argv.slice(2)) {
   const args = {
     command: "",
     includeLogs: false,
@@ -150,7 +150,7 @@ function targetState(dataDir, target) {
   };
 }
 
-export function buildInspectSummary(dataDir) {
+function buildInspectSummary(dataDir) {
   const targets = [...ALWAYS_REMOVABLE, LOGS_TARGET];
   return {
     dataDir: sanitizePath(dataDir),
@@ -164,7 +164,7 @@ export function buildInspectSummary(dataDir) {
   };
 }
 
-export function runCleanup(dataDir, { includeLogs = false } = {}) {
+function runCleanup(dataDir, { includeLogs = false } = {}) {
   const removed = [];
   const missing = [];
 
@@ -195,7 +195,7 @@ export function runCleanup(dataDir, { includeLogs = false } = {}) {
   };
 }
 
-export async function main(argv = process.argv.slice(2)) {
+async function main(argv = process.argv.slice(2)) {
   if (shouldWriteHelp(argv)) {
     process.stdout.write(`${buildHelpText()}\n`);
     return 0;

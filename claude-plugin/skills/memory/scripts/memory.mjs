@@ -142,7 +142,7 @@ const KNOWN_COMMANDS = [
   "session-messages",
 ];
 
-export function parseArgs(argv = process.argv.slice(2)) {
+function parseArgs(argv = process.argv.slice(2)) {
   const args = {
     command: "",
     id: "",
@@ -294,7 +294,7 @@ export function parseArgs(argv = process.argv.slice(2)) {
   return args;
 }
 
-export function buildListUrl(baseUrl, args) {
+function buildListUrl(baseUrl, args) {
   const url = buildMem9Url(baseUrl, "v1alpha2/mem9s/memories");
   if (args.q) {
     url.searchParams.set("q", args.q);
@@ -336,7 +336,7 @@ export function buildListUrl(baseUrl, args) {
   return url.toString();
 }
 
-export function buildSessionMessagesUrl(baseUrl, args) {
+function buildSessionMessagesUrl(baseUrl, args) {
   if (args.sessionIds.length === 0) {
     throw new Error("session-messages requires at least one --session-id.");
   }
@@ -353,7 +353,7 @@ export function buildSessionMessagesUrl(baseUrl, args) {
   return url.toString();
 }
 
-export function buildUpdateBody(args) {
+function buildUpdateBody(args) {
   const body = {};
   if (args.content) {
     body.content = args.content;
@@ -417,7 +417,7 @@ async function runCommand(args) {
   }
 }
 
-export async function main(argv = process.argv.slice(2)) {
+async function main(argv = process.argv.slice(2)) {
   if (shouldWriteHelp(argv)) {
     process.stdout.write(`${buildHelpText()}\n`);
     return 0;
