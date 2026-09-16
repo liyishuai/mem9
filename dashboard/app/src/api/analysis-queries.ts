@@ -132,6 +132,7 @@ async function persistAnalysisSnapshot(
   jobId: string,
   fingerprint: string,
   snapshot: SpaceAnalysisState["snapshot"],
+  sourceManaged: boolean,
 ): Promise<void> {
   try {
     await writeAnalysisCache(spaceId, range, {
@@ -139,6 +140,7 @@ async function persistAnalysisSnapshot(
       jobId,
       updatedAt: new Date().toISOString(),
       taxonomyVersion: snapshot?.taxonomyVersion ?? DEFAULT_TAXONOMY_VERSION,
+      sourceManaged,
       snapshot,
     });
   } catch {
@@ -172,6 +174,18 @@ export function shouldRestartIncompleteCachedSnapshot(
   return (
     !shouldStopPollingSnapshot(snapshot) &&
     snapshot.progress.uploadedBatches < snapshot.expectedTotalBatches
+  );
+}
+
+export function shouldResumeSourceManagedSnapshot(
+  sourceManaged: boolean | undefined,
+  snapshot: AnalysisJobSnapshotResponse,
+  cacheFresh: boolean,
+): boolean {
+  return (
+    sourceManaged === true &&
+    cacheFresh &&
+    shouldRestartIncompleteCachedSnapshot(snapshot)
   );
 }
 
@@ -302,6 +316,7 @@ async function startAnalysisStartup(
       createResponse.jobId,
       fingerprint,
       workingSnapshot,
+      true,
     );
     emitSnapshot(workingSnapshot);
 
@@ -312,6 +327,7 @@ async function startAnalysisStartup(
       createResponse.jobId,
       fingerprint,
       snapshot,
+      true,
     );
     emitSnapshot(snapshot);
 
@@ -558,6 +574,7 @@ export function useSpaceAnalysis(input: {
       fingerprint: string,
       nextCursor: number,
       delayMs: number,
+      sourceManaged: boolean,
     ): Promise<void> => {
       if (!canUpdateCurrentRun()) return;
       try {
@@ -581,6 +598,7 @@ export function useSpaceAnalysis(input: {
           jobId,
           fingerprint,
           mergedSnapshot,
+          sourceManaged,
         );
 
         if (
@@ -604,7 +622,7 @@ export function useSpaceAnalysis(input: {
         pollProgressState = shouldStop ? null : nextPollProgressState;
         updateState((current) => ({
           ...current,
-          phase: shouldStop ? "completed" : "processing",
+          phase: shouldStop ? "completed" : getSnapshotPhase(mergedSnapshot),
           snapshot: mergedSnapshot,
           events: trimEvents([...updates.events].reverse(), 8),
           cursor: updates.nextCursor,
@@ -619,19 +637,33 @@ export function useSpaceAnalysis(input: {
         if (shouldStop) return;
 
         timer = window.setTimeout(() => {
-          void poll(jobId, fingerprint, updates.nextCursor, delayMs);
+          void poll(
+            jobId,
+            fingerprint,
+            updates.nextCursor,
+            delayMs,
+            sourceManaged,
+          );
         }, delayMs);
       } catch (error) {
         if (!canUpdateCurrentRun()) return;
         const nextDelay = Math.min(delayMs * 2, 15_000);
         updateState((current) => ({
           ...current,
-          phase: current.snapshot ? "processing" : current.phase,
+          phase: current.snapshot
+            ? getSnapshotPhase(current.snapshot)
+            : current.phase,
           warning: "poll_retrying",
           isRetrying: true,
         }));
         timer = window.setTimeout(() => {
-          void poll(jobId, fingerprint, nextCursor, nextDelay);
+          void poll(
+            jobId,
+            fingerprint,
+            nextCursor,
+            nextDelay,
+            sourceManaged,
+          );
         }, nextDelay);
         if (
           error instanceof AnalysisApiError &&
@@ -668,20 +700,45 @@ export function useSpaceAnalysis(input: {
         cached?.fingerprint === fingerprint &&
         cached.taxonomyVersion === DEFAULT_TAXONOMY_VERSION &&
         cached.snapshot !== null;
+      const cacheFresh = cached
+        ? isAnalysisCacheFresh(cached.updatedAt)
+        : false;
+      const isFreshMatchingCachedJob =
+        isMatchingCachedJob && cacheFresh;
 
-      if (
-        cached &&
-        (!isMatchingCachedJob ||
-          !cached.snapshot ||
-          !isAnalysisCacheFresh(cached.updatedAt))
-      ) {
+      if (cached && !isFreshMatchingCachedJob) {
         await clearAnalysisCache(spaceId, range);
       }
 
-      if (isMatchingCachedJob && cached?.snapshot) {
+      if (isFreshMatchingCachedJob && cached?.snapshot) {
         const cachedSnapshot = cached.snapshot;
 
         if (shouldRestartIncompleteCachedSnapshot(cachedSnapshot)) {
+          if (
+            !activeStartup &&
+            shouldResumeSourceManagedSnapshot(
+              cached.sourceManaged,
+              cachedSnapshot,
+              cacheFresh,
+            )
+          ) {
+            syncStartupSnapshot(
+              cachedSnapshot,
+              cached.jobId,
+              fingerprint,
+              getDefaultPollMs(),
+            );
+            pollProgressState = createPollProgressState(0, cachedSnapshot);
+            await poll(
+              cached.jobId,
+              fingerprint,
+              0,
+              getDefaultPollMs(),
+              true,
+            );
+            return;
+          }
+
           if (!activeStartup) {
             await clearAnalysisCache(spaceId, range);
           } else {
@@ -711,7 +768,13 @@ export function useSpaceAnalysis(input: {
               }));
 
               if (!shouldStop) {
-                await poll(startup.jobId, fingerprint, 0, startup.pollAfterMs);
+                await poll(
+                  startup.jobId,
+                  fingerprint,
+                  0,
+                  startup.pollAfterMs,
+                  true,
+                );
               }
               return;
             } catch (error) {
@@ -749,7 +812,13 @@ export function useSpaceAnalysis(input: {
           }));
 
           if (!shouldStop) {
-            await poll(cached.jobId, fingerprint, 0, getDefaultPollMs());
+            await poll(
+              cached.jobId,
+              fingerprint,
+              0,
+              getDefaultPollMs(),
+              cached.sourceManaged === true,
+            );
           }
           return;
         }
@@ -798,7 +867,13 @@ export function useSpaceAnalysis(input: {
         }));
 
         if (!shouldStop) {
-          await poll(startup.jobId, fingerprint, 0, startup.pollAfterMs);
+          await poll(
+            startup.jobId,
+            fingerprint,
+            0,
+            startup.pollAfterMs,
+            true,
+          );
         }
       } catch (error) {
         await clearAnalysisCache(spaceId, range);
